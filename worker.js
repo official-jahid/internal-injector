@@ -134,9 +134,13 @@ const PAGE = `<!doctype html>
     <article>
       <h2>Exit codes</h2>
       <ul>
-        <li><span class="exit0">0</span> - injected. Press <b>INSERT</b> in BlueStacks for the menu. The window closes right away.</li>
-        <li><span class="exit1">1</span> - failure. The error prints in red, then the window closes.</li>
+        <li><span class="exit0">0</span> - injected and verified: the DLL is reported loaded in the game and it is still alive 20s later. Press <b>INSERT</b> in BlueStacks for the menu. The window closes right away.</li>
+        <li><span class="exit1">1</span> - anything else, including "the DLL loaded but the game was stopped right after". The error prints in red, then the window closes.</li>
       </ul>
+    </article>
+    <article>
+      <h2>If the game closes right after injecting</h2>
+      <p class="muted">The injector only opens the target, writes the DLL path and starts a remote <code>LoadLibraryW</code>; it never terminates anything. If the game closes after a <b>verified</b> load, the loaded DLL ended it: tests here show a harmless DLL leaves HD-Player alive, while REGIX.dll stops a host process itself (it carries its own process checks). The command reports that honestly instead of faking a success.</p>
     </article>
     <article>
       <h2>Good to know</h2>
