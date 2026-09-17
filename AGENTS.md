@@ -55,3 +55,5 @@ Guidance for AI coding agents working in this repository.
 | 2026-09-17 | Documented one-liner: `irm https://raw.githubusercontent.com/official-jahid/internal-injector/main/Inject-REGIX.ps1 \| iex` |
 | 2026-09-17 | Cloudflare Worker (`worker.js`) added: CLI clients get `Inject-REGIX.ps1` proxied live from raw `main`; browsers get an honest, responsive info page (requirements, what it does, exit codes, repo link) |
 | 2026-09-17 | Injection chain must stay script-only: no auto-download/auto-run of extra binaries (e.g. injector.exe) was requested and rejected; the landing page must always disclose what the command does |
+| 2026-09-17 | 32-bit PowerShell support: auto-relaunch via SysNative 64-bit powershell.exe (iex mode re-fetches the script to %TEMP%); loop-guarded by env REGIX_X64_RELAUNCH |
+| 2026-09-17 | injector.exe: requested again for auto download+run as admin; on hold pending the user explaining the binary's provenance/behavior - chain stays script-only until then |

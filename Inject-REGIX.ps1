@@ -14,6 +14,9 @@
 
   PowerShell closes automatically: exit 0 on success, exit 1 on any failure.
   Requires an elevated (Administrator) PowerShell and BlueStacks 5 running.
+  Works from 32-bit or 64-bit PowerShell: a 32-bit host is automatically
+  re-executed through 64-bit PowerShell (a 32-bit host cannot inject into the
+  x64 game process).
 
   When run as a saved file, local DLLs take precedence:
   -DllPath, .\Build\REGIX.dll, then legacy .\Build\REIMANOS.dll.
@@ -31,9 +34,13 @@ param(
 $ErrorActionPreference = "Stop"
 $ProgressPreference = "Continue"
 
+# TLS 1.2 for Windows PowerShell 5.1 (used by both the relaunch and DLL downloads).
+try { [Net.ServicePointManager]::SecurityProtocol = [Net.ServicePointManager]::SecurityProtocol -bor [Net.SecurityProtocolType]::Tls12 } catch { }
+
 # ---- Fixed configuration -----------------------------------------------------
 $RepoRawBase   = "https://raw.githubusercontent.com/official-jahid/internal-injector/main"
 $DllUrl        = "$RepoRawBase/REGIX.dll"
+$ScriptUrl     = "$RepoRawBase/Inject-REGIX.ps1"   # used for the 32-bit -> 64-bit relaunch
 $ProcessName   = "HD-Player"          # fixed target: BlueStacks 5 player
 $MinDllBytes   = 5MB                  # sanity floor: real DLL is ~27 MB
 $DownloadRetry = 1
@@ -52,6 +59,34 @@ function Success([string]$Message) {
   exit 0
 }
 
+
+# ---- Bitness guard: a 32-bit PowerShell cannot inject into the x64 game ------
+# VirtualAllocEx/CreateRemoteThread pointers truncate in an x86 host, so we
+# re-run this exact script through the 64-bit Windows PowerShell host.
+if (-not [Environment]::Is64BitProcess) {
+  if (-not [Environment]::Is64BitOperatingSystem) { Fail "32-bit Windows detected. REGIX requires 64-bit Windows (HD-Player.exe is x64)." }
+  if ($env:REGIX_X64_RELAUNCH -eq '1') { Fail "Still running 32-bit PowerShell after relaunch. Open 'Windows PowerShell' (64-bit) manually and run the command again." }
+
+  $sysNative = Join-Path $env:SystemRoot 'SysNative\WindowsPowerShell\v1.0\powershell.exe'
+  if (-not (Test-Path -LiteralPath $sysNative)) { Fail "64-bit PowerShell host not found: $sysNative" }
+
+  if ($PSCommandPath -and (Test-Path -LiteralPath $PSCommandPath)) {
+    # File mode: re-run the same script file in 64-bit PowerShell.
+    $relaunchTarget = $PSCommandPath
+  } else {
+    # irm | iex mode: fetch this same script from the repo and run it as a file.
+    $relaunchTarget = Join-Path ([IO.Path]::GetTempPath()) 'REGIX-Inject-x64.ps1'
+    try { Invoke-WebRequest -Uri $ScriptUrl -OutFile $relaunchTarget -UseBasicParsing -TimeoutSec 30 } catch { Fail "Could not fetch the script for the 64-bit relaunch: $($_.Exception.Message)" }
+  }
+
+  Write-Host "[REGIX] 32-bit PowerShell detected. Relaunching in 64-bit PowerShell..." -ForegroundColor Cyan
+  $env:REGIX_X64_RELAUNCH = '1'
+  $argList = @('-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', $relaunchTarget)
+  if ($PSBoundParameters.ContainsKey('DllPath')) { $argList += @('-DllPath', $DllPath) }
+  try { & $sysNative @argList } catch { Fail "Failed to start 64-bit PowerShell: $($_.Exception.Message)" }
+  $relaunchExit = if ($null -ne $LASTEXITCODE) { $LASTEXITCODE } else { 1 }
+  exit $relaunchExit
+}
 
 # ---- Native access -----------------------------------------------------------
 if (-not ([System.Management.Automation.PSTypeName]"NativeRegixV2").Type) {
@@ -129,9 +164,6 @@ if (-not ($DllPath -and (Test-Path -LiteralPath $DllPath))) {
   Write-Host "[REGIX] Local DLL not found. Downloading REGIX.dll..."
   Write-Host "[REGIX] URL   : $DllUrl"
   Write-Host "[REGIX] Dest  : $dllTemp"
-
-  # TLS 1.2 for Windows PowerShell 5.1 compatibility.
-  try { [Net.ServicePointManager]::SecurityProtocol = [Net.ServicePointManager]::SecurityProtocol -bor [Net.SecurityProtocolType]::Tls12 } catch { }
 
   $downloaded = $false
   try { Add-Type -AssemblyName System.Net.Http } catch { }   # PS 5.1: not loaded by default

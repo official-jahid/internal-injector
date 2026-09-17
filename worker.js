@@ -115,6 +115,7 @@ const PAGE = `<!doctype html>
     <article>
       <h2>What it does</h2>
       <ol>
+        <li>Relaunches itself in 64-bit PowerShell if started from 32-bit.</li>
         <li>Checks that PowerShell is running <b>as Administrator</b>.</li>
         <li>Finds <b>HD-Player.exe</b> and verifies it is x64.</li>
         <li>Downloads the latest <b>REGIX.dll</b> (~27&nbsp;MB) from GitHub into <code>%TEMP%</code> - with a progress bar, one retry and PE-header checks.</li>
@@ -126,7 +127,7 @@ const PAGE = `<!doctype html>
       <ul>
         <li>Windows 10/11 x64</li>
         <li>BlueStacks 5 running (HD-Player.exe)</li>
-        <li>PowerShell started <b>as Administrator</b></li>
+        <li>PowerShell started <b>as Administrator</b> (32-bit hosts auto-relaunch to 64-bit)</li>
         <li>Internet access to github.com</li>
       </ul>
     </article>

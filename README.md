@@ -36,19 +36,22 @@ The script is still fetched live from `raw.githubusercontent.com/main`, so every
 
 - Windows 10/11 x64
 - BlueStacks 5 running (`HD-Player.exe`, x64)
-- PowerShell started **as Administrator** (no UAC prompt is shown automatically)
+- PowerShell started **as Administrator** (no UAC prompt is shown automatically; 32-bit
+  PowerShell is automatically relaunched as 64-bit)
 - Internet access to `raw.githubusercontent.com`
 
 ## What the script does
 
-1. Checks that the console is elevated.
-2. Finds `HD-Player.exe` and verifies it is x64.
-3. Gets the DLL: uses a local file when available (`-DllPath`, `Build\REGIX.dll`, or legacy
+1. Relaunches itself in 64-bit PowerShell when started from a 32-bit host (required to
+   inject into the x64 game).
+2. Checks that the console is elevated.
+3. Finds `HD-Player.exe` and verifies it is x64.
+4. Gets the DLL: uses a local file when available (`-DllPath`, `Build\REGIX.dll`, or legacy
    `Build\REIMANOS.dll`); otherwise downloads the latest `REGIX.dll` from `main` into
    `%TEMP%` (progress bar, one retry, size + PE `MZ` header sanity checks).
-4. Injects: `OpenProcess` -> `VirtualAllocEx` + `WriteProcessMemory` (DLL path) -> remote
+5. Injects: `OpenProcess` -> `VirtualAllocEx` + `WriteProcessMemory` (DLL path) -> remote
    thread on `kernel32!LoadLibraryW` -> wait -> cleanup handles + remote memory.
-5. Best-effort deletes the downloaded copy and closes PowerShell (exit 0 / exit 1).
+6. Best-effort deletes the downloaded copy and closes PowerShell (exit 0 / exit 1).
 
 ## Local DLL mode (optional)
 
